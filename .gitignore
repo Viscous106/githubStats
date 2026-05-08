@@ -1,0 +1,22 @@
+# ── Dependencies ──────────────────────────────────────────
+node_modules/
+
+# ── Secrets (NEVER commit these) ──────────────────────────
+.env
+vercel_token
+
+# ── Build & deploy artefacts ──────────────────────────────
+.vercel
+coverage/
+benchmarks/
+
+# ── OS / editor noise ─────────────────────────────────────
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
+
+# ── Lockfile variants (keep package-lock.json, ignore others) ──
+yarn.lock
+pnpm-lock.yaml
