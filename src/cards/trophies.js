@@ -1,197 +1,138 @@
 // @ts-check
+// Trophy icon paths from GitHub's trophy octicon (16×16 viewBox, MIT)
+// Layout inspired by krishyadav90/github-profile-trophy
 
 import { getCardColors } from "../common/color.js";
 import { encodeHTML } from "../common/html.js";
 
-const TW = 100;   // trophy card width
-const TH = 140;   // trophy card height
+const TW = 110;    // trophy card width  (matches krishyadav90's DEFAULT_PANEL_SIZE)
+const TH = 110;    // trophy card height
 const COLS_DEFAULT = 6;
-const PAD_X = 16;
-const PAD_TOP = 46;
+const PAD_X = 14;
+const PAD_TOP = 44;
 const PAD_BOT = 14;
 const GAP = 6;
 
-// Catppuccin-accent tier palette (looks great on mocha and other dark themes too)
+// Catppuccin-accent tier palette with achievement labels
 const TIERS = [
-  { id: "SSS", label: "SSS", color: "#f9e2af" },  // yellow
-  { id: "SS",  label: "SS",  color: "#f38ba8" },  // red
-  { id: "S",   label: "S",   color: "#cba6f7" },  // mauve
-  { id: "AAA", label: "AAA", color: "#89b4fa" },  // blue
-  { id: "AA",  label: "AA",  color: "#94e2d5" },  // teal
-  { id: "A",   label: "A",   color: "#a6e3a1" },  // green
-  { id: "B",   label: "B",   color: "#89dceb" },  // sky
-  { id: "C",   label: "C",   color: "#6c7086" },  // overlay
-  { id: "?",   label: "?",   color: "#45475a" },  // surface
+  { id: "SSS", label: "SSS", color: "#f9e2af", shadow: "#e0c87840", achievement: "Ultra Legend"  },
+  { id: "SS",  label: "SS",  color: "#f38ba8", shadow: "#f38ba840", achievement: "Super Master"  },
+  { id: "S",   label: "S",   color: "#cba6f7", shadow: "#cba6f740", achievement: "Expert"         },
+  { id: "AAA", label: "AAA", color: "#89b4fa", shadow: "#89b4fa40", achievement: "Super Skilled"  },
+  { id: "AA",  label: "AA",  color: "#94e2d5", shadow: "#94e2d540", achievement: "Skilled"        },
+  { id: "A",   label: "A",   color: "#a6e3a1", shadow: "#a6e3a140", achievement: "Proficient"     },
+  { id: "B",   label: "B",   color: "#89dceb", shadow: "#89dceb40", achievement: "Developing"     },
+  { id: "C",   label: "C",   color: "#6c7086", shadow: "#6c708640", achievement: "Starting Out"   },
+  { id: "?",   label: "?",   color: "#45475a", shadow: "#45475a40", achievement: "Unknown"        },
 ];
 
 const CATEGORIES = [
-  {
-    title: "Total Commits",
-    icon: "commit",
-    getValue: (s) => s.totalCommits,
-    thresholds: [3000, 2000, 1000, 500, 200, 100, 50, 10],
-  },
-  {
-    title: "Total Stars",
-    icon: "star",
-    getValue: (s) => s.totalStars,
-    thresholds: [500, 200, 100, 50, 30, 10, 5, 1],
-  },
-  {
-    title: "Total PRs",
-    icon: "pr",
-    getValue: (s) => s.totalPRs,
-    thresholds: [500, 300, 200, 100, 50, 20, 10, 1],
-  },
-  {
-    title: "Total Issues",
-    icon: "issue",
-    getValue: (s) => s.totalIssues,
-    thresholds: [200, 100, 50, 30, 20, 10, 5, 1],
-  },
-  {
-    title: "Contributed To",
-    icon: "contrib",
-    getValue: (s) => s.contributedTo,
-    thresholds: [100, 70, 50, 30, 20, 10, 5, 1],
-  },
+  { title: "Total Commits",  getValue: (s) => s.totalCommits,  thresholds: [3000,2000,1000,500,200,100,50,10] },
+  { title: "Total Stars",    getValue: (s) => s.totalStars,    thresholds: [500,200,100,50,30,10,5,1]         },
+  { title: "Total PRs",      getValue: (s) => s.totalPRs,      thresholds: [500,300,200,100,50,20,10,1]       },
+  { title: "Total Issues",   getValue: (s) => s.totalIssues,   thresholds: [200,100,50,30,20,10,5,1]          },
+  { title: "Contributed To", getValue: (s) => s.contributedTo, thresholds: [100,70,50,30,20,10,5,1]           },
   {
     title: "Rank",
-    icon: "rank",
-    getValue: (s) => {
-      const map = { "S+": 8, S: 7, "A++": 6, "A+": 5, A: 4, B: 3, C: 2 };
-      return map[s.rank?.level] ?? 0;
-    },
-    thresholds: [8, 7, 6, 5, 4, 3, 2, 1],
+    getValue: (s) => { const m={"S+":8,S:7,"A++":6,"A+":5,A:4,B:3,C:2}; return m[s.rank?.level]??0; },
+    thresholds: [8,7,6,5,4,3,2,1],
     formatValue: (s) => s.rank?.level || "?",
   },
 ];
 
-/**
- * SVG trophy cup, drawn in a 48×44 coordinate space.
- * The `size` param scales it proportionally.
- */
-const trophyPath = (size, color) => {
-  const k = size / 48;
-  const p = (x, y) => `${(x * k).toFixed(1)},${(y * k).toFixed(1)}`;
-  const n = (v) => (v * k).toFixed(1);
-  return `<g>
-    <path d="M${p(9,3)} L${p(39,3)} L${p(36,22)} Q${p(24,31)} ${p(12,22)} Z"
-      fill="${color}"/>
-    <path d="M${p(9,7)} Q${p(1,12)} ${p(5,20)} Q${p(9,25)} ${p(13,22)}"
-      fill="none" stroke="${color}" stroke-width="${n(3.5)}" stroke-linecap="round"/>
-    <path d="M${p(39,7)} Q${p(47,12)} ${p(43,20)} Q${p(39,25)} ${p(35,22)}"
-      fill="none" stroke="${color}" stroke-width="${n(3.5)}" stroke-linecap="round"/>
-    <rect x="${n(21)}" y="${n(31)}" width="${n(6)}" height="${n(8)}" rx="${n(1.5)}" fill="${color}"/>
-    <rect x="${n(13)}" y="${n(38)}" width="${n(22)}" height="${n(5)}" rx="${n(2.5)}" fill="${color}"/>
-  </g>`;
-};
-
-/** Inline SVG icon paths, 24-unit viewBox. */
-const catIcon = (type, color) => {
-  const d = {
-    commit: `<circle cx="12" cy="12" r="4" fill="${color}"/>
-      <path d="M2 12h6m8 0h6" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`,
-    star:   `<path d="M12 2l2.7 5.9 6.3.5-4.7 4.3 1.5 6.3L12 16l-5.8 3 1.5-6.3L3 8.4l6.3-.5z" fill="${color}"/>`,
-    pr:     `<circle cx="6" cy="6" r="3" fill="${color}"/><circle cx="18" cy="18" r="3" fill="${color}"/>
-      <path d="M6 9v12m12-3V6a3 3 0 00-3-3H9" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round"/>`,
-    issue:  `<circle cx="12" cy="12" r="9" stroke="${color}" stroke-width="2" fill="none"/>
-      <path d="M12 8v4m0 4h.01" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`,
-    contrib:`<circle cx="9" cy="7" r="4" fill="${color}"/>
-      <path d="M2 21v-1a7 7 0 0114 0v1" fill="${color}"/>
-      <circle cx="18" cy="7" r="3" fill="${color}" opacity="0.6"/>
-      <path d="M21 21v-1a5 5 0 00-4-4.9" stroke="${color}" stroke-width="1.5" fill="none"/>`,
-    rank:   `<path d="M12 2l2.5 5.5 5.5.5-4 4 1.3 5.5L12 15l-5.3 2.5 1.3-5.5-4-4 5.5-.5z" fill="${color}"/>`,
-  };
-  return d[type] || d.rank;
-};
-
 const getTierIndex = (value, thresholds) => {
-  for (let i = 0; i < thresholds.length; i++) {
-    if (value >= thresholds[i]) return i;
-  }
+  for (let i = 0; i < thresholds.length; i++) if (value >= thresholds[i]) return i;
   return 8;
 };
 
 const tierProgress = (value, tierIdx, thresholds) => {
   if (tierIdx === 0) return 1;
   if (tierIdx >= thresholds.length) return Math.min(value / thresholds[thresholds.length - 1], 1);
-  const lo = thresholds[tierIdx];
-  const hi = thresholds[tierIdx - 1];
+  const lo = thresholds[tierIdx], hi = thresholds[tierIdx - 1];
   return Math.max(0, Math.min(1, (value - lo) / (hi - lo)));
 };
+
+/**
+ * GitHub trophy octicon rendered as inline SVG at (ox, oy) with given size.
+ * ViewBox is 0 0 16 16 — paths sourced from GitHub's trophy.svg.
+ */
+const githubTrophyIcon = (ox, oy, size, color) => `
+  <svg x="${ox}" y="${oy}" width="${size}" height="${size}" viewBox="0 0 16 16" fill="${color}"
+    xmlns="http://www.w3.org/2000/svg">
+    <!-- cup body + base + stem -->
+    <path d="M3 1h10c-.495 3.467-.5 10-5 10S3.495 4.467 3 1zm0 15a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1H3zm2-1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1H5z"/>
+    <!-- stem block -->
+    <path d="M7 10h2v4H7v-4z"/>
+    <!-- base decoration -->
+    <path d="M10 11c0 .552-.895 1-2 1s-2-.448-2-1 .895-1 2-1 2 .448 2 1z"/>
+    <!-- left & right handles -->
+    <path fill-rule="evenodd" d="M12.5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-3 2a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm-6-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-3 2a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/>
+  </svg>`;
+
+/** Rank badge circle with letter, positioned at top-left of card. */
+const rankBadge = (color, label) => `
+  <circle cx="18" cy="18" r="12" fill="${color}" opacity="0.18"/>
+  <circle cx="18" cy="18" r="12" fill="none" stroke="${color}" stroke-width="1.2"/>
+  <text x="18" y="18" font-size="${label.length > 1 ? "6.5" : "8"}" font-weight="700"
+    text-anchor="middle" dominant-baseline="middle" fill="${color}">${label}</text>`;
 
 const renderTrophy = ({ x, y, cat, value, displayValue, tierIdx }) => {
   const tier = TIERS[tierIdx];
   const c = tier.color;
-  const midX = TW / 2;
+  const midX = TW / 2;   // 55
+  const iconSize = 52;
+  const iconX = midX - iconSize / 2;  // 29
+  const iconY = 12;
+
   const prog = tierProgress(value, tierIdx, cat.thresholds);
-  const barW = Math.max(4, Math.round(prog * (TW - 20)));
-  const iconSize = 22;
+  const barW = Math.max(3, Math.round(prog * (TW - 20)));
+  const barY = TH - 9;
 
   return `<g transform="translate(${x},${y})">
-    <!-- card surface (white overlay for subtle lift) -->
-    <rect width="${TW}" height="${TH}" rx="7" fill="white" fill-opacity="0.05"/>
-    <!-- top glow band -->
-    <rect width="${TW}" height="46" rx="7" fill="${c}" fill-opacity="0.14"/>
-    <rect y="40" width="${TW}" height="6" fill="${c}" fill-opacity="0.14"/>
-    <!-- border -->
-    <rect width="${TW}" height="${TH}" rx="7" fill="none" stroke="${c}" stroke-width="1.5"/>
+  <!-- card surface -->
+  <rect width="${TW}" height="${TH}" rx="8" fill="white" fill-opacity="0.04"/>
+  <!-- glow bg -->
+  <rect width="${TW}" height="${TH}" rx="8" fill="${c}" fill-opacity="0.08"/>
+  <!-- border -->
+  <rect width="${TW}" height="${TH}" rx="8" fill="none" stroke="${c}" stroke-width="1.5"/>
 
-    <!-- trophy cup (44px, centred) -->
-    <g transform="translate(${midX - 22}, 3)">${trophyPath(44, c)}</g>
+  <!-- rank badge (top-left) -->
+  ${rankBadge(c, tier.label)}
 
-    <!-- tier badge -->
-    <text x="${midX}" y="58" font-size="13" font-weight="700"
-      text-anchor="middle" fill="${c}">${tier.label}</text>
+  <!-- trophy icon (GitHub octicon, centred) -->
+  ${githubTrophyIcon(iconX, iconY, iconSize, c)}
 
-    <!-- category icon -->
-    <g transform="translate(${midX - iconSize / 2}, 63)">
-      <svg viewBox="0 0 24 24" width="${iconSize}" height="${iconSize}">${catIcon(cat.icon, c)}</svg>
-    </g>
+  <!-- category title -->
+  <text x="${midX}" y="75" font-size="10" font-weight="600"
+    text-anchor="middle" fill="${c}">${encodeHTML(cat.title)}</text>
 
-    <!-- category name -->
-    <text x="${midX}" y="98" font-size="9" font-weight="500"
-      text-anchor="middle" fill="${c}" opacity="0.85">${encodeHTML(cat.title)}</text>
+  <!-- achievement label -->
+  <text x="${midX}" y="87" font-size="8.5" font-style="italic"
+    text-anchor="middle" fill="${c}" opacity="0.75">${tier.achievement}</text>
 
-    <!-- value -->
-    <text x="${midX}" y="112" font-size="12" font-weight="700"
-      text-anchor="middle" fill="${c}">${displayValue}</text>
+  <!-- value -->
+  <text x="${midX}" y="100" font-size="12" font-weight="700"
+    text-anchor="middle" fill="${c}">${displayValue}</text>
 
-    <!-- progress bar track -->
-    <rect x="10" y="${TH - 13}" width="${TW - 20}" height="4" rx="2"
-      fill="${c}" fill-opacity="0.2"/>
-    <!-- progress bar fill -->
-    <rect x="10" y="${TH - 13}" width="${barW}" height="4" rx="2"
-      fill="${c}"/>
-  </g>`;
+  <!-- progress bar track -->
+  <rect x="10" y="${barY}" width="${TW - 20}" height="3.5" rx="1.75"
+    fill="${c}" fill-opacity="0.2"/>
+  <!-- progress bar fill -->
+  <rect x="10" y="${barY}" width="${barW}" height="3.5" rx="1.75" fill="${c}"/>
+</g>`;
 };
 
-/**
- * Render the trophies card as an SVG string.
- */
 const renderTrophiesCard = (statsData, options = {}) => {
   const {
     theme = "default",
-    title_color,
-    text_color,
-    bg_color,
-    border_color,
-    icon_color,
-    hide_border = false,
-    border_radius = 4.5,
-    custom_title,
-    columns,
+    title_color, text_color, bg_color, border_color, icon_color,
+    hide_border = false, border_radius = 4.5,
+    custom_title, columns,
   } = options;
 
   const { titleColor, bgColor, borderColor } = getCardColors({
-    title_color,
-    text_color,
-    icon_color: icon_color || "",
-    bg_color,
-    border_color,
-    ring_color: title_color || "",
-    theme,
+    title_color, text_color, icon_color: icon_color || "",
+    bg_color, border_color, ring_color: title_color || "", theme,
   });
 
   const cols = Math.min(Math.max(parseInt(columns, 10) || COLS_DEFAULT, 1), 6);
@@ -214,13 +155,13 @@ const renderTrophiesCard = (statsData, options = {}) => {
   return `<svg width="${cardW}" height="${cardH}" viewBox="0 0 ${cardW} ${cardH}"
   xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="trophy-title">
   <title id="trophy-title">${title}</title>
-  <style>text { font-family: 'Segoe UI', Ubuntu, Sans-Serif; }</style>
+  <style>text { font-family: 'Segoe UI', Ubuntu, sans-serif; }</style>
 
   <rect x="0.5" y="0.5" rx="${border_radius}" ry="${border_radius}"
     width="${cardW - 1}" height="${cardH - 1}"
     fill="${bgColor}" stroke="${hide_border ? "none" : borderColor}"/>
 
-  <text x="${cardW / 2}" y="27" font-size="14" font-weight="600"
+  <text x="${cardW / 2}" y="26" font-size="14" font-weight="600"
     text-anchor="middle" fill="${titleColor}">${title}</text>
 
   ${trophies}
