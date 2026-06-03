@@ -5,6 +5,8 @@ import statusPatInfo from "../../api/status/pat-info.js";
 import statusUp from "../../api/status/up.js";
 import langCard from "../../api/top-langs.js";
 import wakatimeCard from "../../api/wakatime.js";
+import streakCard from "../../api/streak.js";
+import trophiesCard from "../../api/trophies.js";
 
 const routes = {
   "/api": statsCard,
@@ -15,6 +17,8 @@ const routes = {
   "/api/gist": gistCard,
   "/api/status/up": statusUp,
   "/api/status/pat-info": statusPatInfo,
+  "/api/streak": streakCard,
+  "/api/trophies": trophiesCard,
 };
 
 const createResponse = () => {
