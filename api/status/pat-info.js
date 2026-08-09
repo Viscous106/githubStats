@@ -149,11 +149,11 @@ export default async (_, res) => {
         `max-age=0, s-maxage=${RATE_LIMIT_SECONDS}`,
       );
     }
-    res.send(JSON.stringify(PATsInfo, null, 2));
+    return res.send(JSON.stringify(PATsInfo, null, 2));
   } catch (err) {
     // Throw error if something went wrong.
     logger.error(err);
     res.setHeader("Cache-Control", "no-store");
-    res.send("Something went wrong: " + err.message);
+    return res.send("Something went wrong: " + err.message);
   }
 };

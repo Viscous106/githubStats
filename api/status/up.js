@@ -106,19 +106,16 @@ export default async (req, res) => {
 
     switch (type) {
       case "shields":
-        res.send(shieldsUptimeBadge(PATsValid));
-        break;
+        return res.send(shieldsUptimeBadge(PATsValid));
       case "json":
-        res.send({ up: PATsValid });
-        break;
+        return res.send({ up: PATsValid });
       default:
-        res.send(PATsValid);
-        break;
+        return res.send(PATsValid);
     }
   } catch (err) {
     // Return fail boolean if something went wrong.
     logger.error(err);
     res.setHeader("Cache-Control", "no-store");
-    res.send("Something went wrong: " + err.message);
+    return res.send("Something went wrong: " + err.message);
   }
 };
